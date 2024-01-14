@@ -12,6 +12,8 @@
   "dependencies": {
     "@tauri-apps/api": "^1.5.2",
     "@types/mousetrap": "^1.6.15",
+    "@wooorm/starry-night": "^3.2.0",
+    "hast-util-to-dom": "^4.0.0",
     "mousetrap": "^1.6.5"
   },
   "devDependencies": {
