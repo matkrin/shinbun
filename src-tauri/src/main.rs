@@ -2,10 +2,9 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::{
-    io::{self, IsTerminal, Read},
+    io::{self, Read},
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
-    time::Duration,
 };
 
 use anyhow::Result;
@@ -19,6 +18,7 @@ use notify::{
 struct MdState {
     md_file: Option<PathBuf>,
     stdin: Option<String>,
+    sync: bool,
 }
 
 /// Simple program to greet a person
@@ -27,6 +27,9 @@ struct MdState {
 struct Args {
     /// Markdown file to open
     file: Option<String>,
+    /// Listen to stdin, must be exclusive
+    #[arg(short, long, exclusive = true)]
+    sync: bool,
 }
 
 fn read_stdin() -> Option<String> {
@@ -57,19 +60,30 @@ fn main() {
         None => None,
     };
 
-    let md_state = MdState { md_file, stdin };
+    let md_state = MdState {
+        md_file,
+        stdin,
+        sync: args.sync,
+    };
 
     tauri::Builder::default()
         .manage(Arc::new(Mutex::new(md_state)))
         .invoke_handler(tauri::generate_handler![
             load_markdown,
             watch_file,
-            stream,
+            start_sync,
             exit,
             is_stdin,
+            is_sync,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[tauri::command]
+fn is_sync(state: tauri::State<Arc<Mutex<MdState>>>) -> bool {
+    let state = state.lock().unwrap();
+    state.sync
 }
 
 #[tauri::command]
@@ -125,11 +139,22 @@ fn watch_file(window: tauri::Window, state: tauri::State<Arc<Mutex<MdState>>>) {
 }
 
 #[tauri::command]
-fn stream(window: tauri::Window, state: tauri::State<Arc<Mutex<MdState>>>) {
+fn start_sync(window: tauri::Window) {
     let win = window.clone();
     std::thread::spawn(move || loop {
-        win.emit("stream", "from tauri").unwrap();
-        std::thread::sleep(Duration::from_millis(10));
+        let mut buffer = String::new();
+        match io::stdin().read_line(&mut buffer) {
+            Ok(n) => println!("REVEIVED: {}, {}", &buffer, n),
+            _ => eprintln!("Error reading from stdin"),
+        }
+        let md = buffer
+            .as_bytes()
+            .split(|&it| it == 0)
+            .map(|it| std::str::from_utf8(it).unwrap())
+            .collect::<Vec<_>>()
+            .join("\n");
+        win.emit("sync", read_markdown(md)).unwrap();
+        // std::thread::sleep(Duration::from_millis(10));
     });
 }
 
