@@ -29,17 +29,21 @@ struct Args {
     file: Option<String>,
 }
 
-fn read_stdin() -> Result<String> {
-    if atty::is(atty::Stream::Stdin) {
-        anyhow::bail!("stdin not redirected");
+fn read_stdin() -> Option<String> {
+    if atty::is(atty::Stream::Stdin)
+        && atty::is(atty::Stream::Stderr)
+        && atty::is(atty::Stream::Stdout)
+    {
+        return None;
     }
     let mut buffer = String::new();
-    io::stdin().read_to_string(&mut buffer)?;
-    Ok(buffer)
+    io::stdin().read_to_string(&mut buffer).unwrap();
+    Some(buffer)
 }
 
 fn main() {
-    let stdin = read_stdin().ok();
+    // let stdin = read_stdin();
+    let stdin = None;
     let args = Args::parse();
     let md_file = match &args.file {
         Some(file) => {
