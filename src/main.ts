@@ -7,7 +7,7 @@ import { keybindings } from "./keybindings";
 const container = document.getElementById("md-container")!;
 
 async function loadMarkdown() {
-    const htmlFromMd: string = await invoke("load_markdown");
+    const htmlFromMd: string | null = await invoke("load_markdown");
     if (htmlFromMd !== null) {
         container.innerHTML = htmlFromMd;
     }
@@ -26,11 +26,27 @@ async function watchMarkdown() {
     invoke("watch_file");
 }
 
-// tauri.tauri.invoke("stream");
-//
-loadMarkdown();
-const stdin = await invoke("is_stdin");
-if (!stdin) {
-    watchMarkdown();
+async function listenSync() {
+    // @ts-ignore
+    const _unlisten = listen(
+        "sync",
+        (event: { event: string; payload: string }) => {
+            container.innerHTML = event.payload;
+            highlightCodeBlocks();
+        },
+    );
+    invoke("start_sync");
 }
+
+const sync: boolean = await invoke("is_sync");
+if (sync) {
+    listenSync();
+} else {
+    loadMarkdown();
+    const stdin: boolean = await invoke("is_stdin");
+    if (!stdin) {
+        watchMarkdown();
+    }
+}
+
 keybindings();
