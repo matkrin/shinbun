@@ -1,5 +1,16 @@
 # shinbun
 
+Small markdown reader/previewer with the same appearance as github. The
+previewed file gets automatically update on every file write/save.
+
+## Usage
+
+So far shinbun just works from the command line.
+
+```bash
+$ shinbun <markdown-file>
+```
+
 ## Keybindings
 
 | Keys                         | Action                  |
