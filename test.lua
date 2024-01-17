@@ -14,22 +14,22 @@ local function transfer_data()
 end
 
 function M.setup()
-        local group = vim.api.nvim_create_augroup("Shinbin", { clear = false })
-        vim.api.nvim_create_autocmd({ "BufEnter" }, {
-            group = group,
-            pattern = { "*.md" },
-            callback = function()
-                start_shinbun()
-                transfer_data()
-            end
-        })
-        vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI", "TextChangedP" }, {
-            group = group,
-            pattern = { "*md" },
-            callback = function()
-                transfer_data()
-            end
-        })
+    local group = vim.api.nvim_create_augroup("Shinbin", { clear = false })
+    vim.api.nvim_create_autocmd({ "BufEnter" }, {
+        group = group,
+        pattern = { "*.md" },
+        callback = function()
+            start_shinbun()
+            transfer_data()
+        end
+    })
+    vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI", "TextChangedP" }, {
+        group = group,
+        pattern = { "*md" },
+        callback = function()
+            transfer_data()
+        end
+    })
 end
 
 return M
