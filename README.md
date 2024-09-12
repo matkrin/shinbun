@@ -3,6 +3,19 @@
 Small markdown reader/previewer with the same appearance as github. The
 preview gets automatically updated on every file write/save.
 
+## Build
+
+In project root:
+```bash
+npm install
+npm build
+```
+
+In src-tauri:
+```bash
+carog build --release --features=custom-protocol
+```
+
 ## Usage
 
 ```bash
