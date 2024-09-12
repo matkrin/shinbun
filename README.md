@@ -8,12 +8,12 @@ preview gets automatically updated on every file write/save.
 In project root:
 ```bash
 npm install
-npm build
+npm run build
 ```
 
 In src-tauri:
 ```bash
-carog build --release --features=custom-protocol
+cargo build --release --features=custom-protocol
 ```
 
 ## Usage
