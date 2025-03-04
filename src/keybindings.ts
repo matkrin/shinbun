@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/tauri";
+import { invoke } from "@tauri-apps/api/core";
 import Mousetrap from "mousetrap";
 
 const container = document.getElementById("md-container")!;

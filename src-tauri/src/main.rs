@@ -7,13 +7,13 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use anyhow::Result;
 use clap::Parser;
 use comrak::markdown_to_html;
 use notify::{
     event::{AccessKind, AccessMode},
     Watcher,
 };
+use tauri::Emitter;
 
 struct MdState {
     md_file: Option<PathBuf>,
@@ -67,6 +67,7 @@ fn main() {
     };
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .manage(Arc::new(Mutex::new(md_state)))
         .invoke_handler(tauri::generate_handler![
             load_markdown,

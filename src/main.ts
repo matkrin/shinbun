@@ -1,5 +1,5 @@
 import { listen } from "@tauri-apps/api/event";
-import { invoke } from "@tauri-apps/api/tauri";
+import { invoke } from "@tauri-apps/api/core";
 
 import { highlightCodeBlocks } from "./syntax_highlighting";
 import { keybindings } from "./keybindings";
