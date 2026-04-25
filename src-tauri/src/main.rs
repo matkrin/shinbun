@@ -2,17 +2,17 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::{
-    io,
+    io::{self, Read},
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
     time::Duration,
 };
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use clap::Parser;
 use notify::{
-    event::{DataChange, ModifyKind},
     Watcher,
+    event::{DataChange, ModifyKind},
 };
 use tauri::Emitter;
 
@@ -138,17 +138,25 @@ fn watch_file(window: tauri::Window, state: tauri::State<Arc<Mutex<MdState>>>) {
 #[tauri::command]
 fn start_sync(window: tauri::Window) {
     let win = window.clone();
-    std::thread::spawn(move || loop {
-        let mut buffer = String::new();
-        match io::stdin().read_line(&mut buffer) {
-            Ok(n) => println!("REVEIVED: {}, {}", &buffer, n),
-            _ => eprintln!("Error reading from stdin"),
+    std::thread::spawn(move || {
+        loop {
+            let mut buffer = String::new();
+            match io::stdin().read_line(&mut buffer) {
+                Ok(n) => println!("REVEIVED: {}, {}", &buffer, n),
+                _ => eprintln!("Error reading from stdin"),
+            }
+            let md = buffer
+                .as_bytes()
+                .split(|&it| it == 0)
+                .map(|it| std::str::from_utf8(it).unwrap())
+                .collect::<Vec<_>>()
+                .join("\n");
+            _ = win.emit(
+                "sync",
+                read_markdown(&md).unwrap_or("Error reading markdown".to_string()),
+            );
+            std::thread::sleep(Duration::from_millis(100));
         }
-        _ = win.emit(
-            "sync",
-            read_markdown(&buffer).unwrap_or("Error reading markdown".to_string()),
-        );
-        std::thread::sleep(Duration::from_millis(100));
     });
 }
 

@@ -3,8 +3,11 @@ local M = {}
 local channel_id
 
 local function start_shinbun()
-    channel_id = vim.fn.jobstart({ "cargo", "tauri", "dev", "--", "--", "--sync" })
-    -- channel_id = vim.fn.jobstart({ "shinbun", "--sync" })
+    channel_id = vim.fn.jobstart({ "shinbun", "--sync" }, {
+        on_exit = function(_, code)
+            vim.notify("shinbun exit:", code)
+        end,
+    })
 end
 
 local function transfer_data()
@@ -25,11 +28,13 @@ function M.setup()
     })
     vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI", "TextChangedP" }, {
         group = group,
-        pattern = { "*md" },
+        pattern = { "*.md" },
         callback = function()
             transfer_data()
         end
     })
 end
 
-return M
+M.setup()
+print("shinbun ready")
+-- return M
