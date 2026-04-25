@@ -1,19 +1,39 @@
 import githubMarkdownCss from "npm:generate-github-markdown-css";
 import { minify } from "npm:csso";
 
-const css: string = await githubMarkdownCss({
+const css = await githubMarkdownCss({
     light: "light",
     dark: "dark_dimmed",
 });
 
-const inserted = css.split("\n").map((line, i) => {
-    if (i == 0) {
-        line += "\nbody,";
-    }
-    return line;
-}).join("\n");
+const lightMatch = css.match(
+    /@media \(prefers-color-scheme: light\)[\s\S]*?--bgColor-default:\s*([^;]+);/
+);
 
-const minified = minify(inserted);
-// Deno.writeTextFile("./ui/style.css", minified.css);
+const darkMatch = css.match(
+    /@media \(prefers-color-scheme: dark\)[\s\S]*?--bgColor-default:\s*([^;]+);/
+);
 
-Deno.writeTextFile("./src/style.css", minified.css);
+const lightBg = lightMatch?.[1]?.trim() ?? "#ffffff";
+const darkBg = darkMatch?.[1]?.trim() ?? "#212830";
+
+const injected = `
+:root {
+  --bgColor-default: ${lightBg};
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bgColor-default: ${darkBg};
+  }
+}
+
+html, body {
+  margin: 10px;
+  background: var(--bgColor-default);
+}
+`;
+
+const finalCss = injected + "\n" + css;
+const minified = minify(finalCss);
+await Deno.writeTextFile("./src/style.css", minified.css);

@@ -38,15 +38,19 @@ async function listenSync() {
     invoke("start_sync");
 }
 
-const sync: boolean = await invoke("is_sync");
-if (sync) {
-    listenSync();
-} else {
-    loadMarkdown();
-    const stdin: boolean = await invoke("is_stdin");
-    if (!stdin) {
-        watchMarkdown();
+async function main() {
+    const sync: boolean = await invoke("is_sync");
+    if (sync) {
+        listenSync();
+    } else {
+        loadMarkdown();
+        const stdin: boolean = await invoke("is_stdin");
+        if (!stdin) {
+            watchMarkdown();
+        }
     }
+
+    keybindings();
 }
 
-keybindings();
+main()
