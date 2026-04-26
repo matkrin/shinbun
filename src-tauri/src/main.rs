@@ -2,14 +2,15 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::{
-    io::{self, Read},
+    io::{self, IsTerminal, Read},
     path::{Path, PathBuf},
+    process,
     sync::{Arc, Mutex},
     time::Duration,
 };
 
 use anyhow::{Result, anyhow};
-use clap::Parser;
+use clap::{CommandFactory, Parser};
 use notify::{
     Watcher,
     event::{DataChange, ModifyKind},
@@ -18,40 +19,54 @@ use tauri::Emitter;
 
 struct MdState {
     md_file: Option<PathBuf>,
-    stdin: Option<String>,
+    stdin_md: Option<String>,
     sync: bool,
 }
 
-/// Simple program to greet a person
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// Markdown file to open
-    file: Option<String>,
+    file: Option<PathBuf>,
     /// Listen to stdin, must be exclusive
     #[arg(short, long, exclusive = true)]
     sync: bool,
 }
 
 fn main() {
-    // let stdin = read_stdin();
-    let stdin = None;
+    let mut stdin = io::stdin();
     let args = Args::parse();
-    let md_file = match &args.file {
+
+    let md_file = match args.file {
+        Some(file) if file.exists() => Some(file),
         Some(file) => {
-            let path_buf = PathBuf::from(file);
-            if path_buf.exists() {
-                Some(path_buf)
-            } else {
-                None
-            }
+            eprintln!("Error: No such file: '{}'", file.to_string_lossy());
+            process::exit(1);
         }
-        None => None,
+        None if stdin.is_terminal() && !args.sync => {
+            _ = Args::command().print_help();
+            process::exit(0);
+        }
+        _ => None,
+    };
+
+    let stdin_md = match md_file {
+        Some(_) => None,
+        None if args.sync => None,
+        None if stdin.is_terminal() => {
+            _ = Args::command().print_help();
+            process::exit(0);
+        }
+        _ => {
+            let mut buffer = String::new();
+            _ = stdin.read_to_string(&mut buffer);
+            Some(buffer)
+        }
     };
 
     let md_state = MdState {
         md_file,
-        stdin,
+        stdin_md,
         sync: args.sync,
     };
 
@@ -79,14 +94,14 @@ fn is_sync(state: tauri::State<Arc<Mutex<MdState>>>) -> bool {
 #[tauri::command]
 fn is_stdin(state: tauri::State<Arc<Mutex<MdState>>>) -> bool {
     let state = state.lock().expect("state mutex poisoned");
-    state.stdin.is_some()
+    state.stdin_md.is_some()
 }
 
 #[tauri::command]
 fn load_markdown(state: tauri::State<Arc<Mutex<MdState>>>) -> Result<String, String> {
     let state = state.lock().map_err(|_| "state poisoned")?;
 
-    if let Some(md) = &state.stdin {
+    if let Some(md) = &state.stdin_md {
         return read_markdown(md).map_err(|e| e.to_string());
     }
 
@@ -123,10 +138,9 @@ fn watch_file(window: tauri::Window, state: tauri::State<Arc<Mutex<MdState>>>) {
                 Ok(Ok(event)) => {
                     if let notify::EventKind::Modify(ModifyKind::Data(DataChange::Content)) =
                         event.kind
+                        && let Ok(md) = read_markdown_from_file(&md_file)
                     {
-                        if let Ok(md) = read_markdown_from_file(&md_file) {
-                            let _ = win.emit("watch", md);
-                        }
+                        let _ = win.emit("watch", md);
                     }
                 }
                 _ => std::thread::sleep(Duration::from_millis(100)),
